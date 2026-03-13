@@ -1,5 +1,7 @@
 # Anti-SEO Researcher
 
+[简体中文](#简体中文)
+
 **Anti-SEO, Anti-Astroturfing Deep Consumer Research Tool**
 
 > In an internet where search results are heavily polluted by SEO manipulation and astroturfing, this tool helps you find genuine consumer feedback and make informed purchase decisions — in any language, for any market.
@@ -169,5 +171,185 @@ anti-seo-researcher/
 Issues and Pull Requests are welcome. Especially welcome contributions in these areas: new category profile examples for different regions, platform search adapters for additional markets, credibility rule optimization for specific languages, and new region/language support.
 
 ## License
+
+[MIT](LICENSE)
+
+---
+
+<a id="简体中文"></a>
+
+# Anti-SEO Researcher
+
+[English](#anti-seo-researcher)
+
+**反 SEO、反软文深度消费调研工具**
+
+> 在搜索结果被 SEO 操控和软文营销严重污染的互联网环境下，这个工具帮你找到真实的消费者反馈，做出明智的购买决策——支持任何语言、任何市场。
+
+## 快速开始
+
+### 安装
+
+将整个目录复制到你的 AI 编程助手的 Skill 目录中：
+
+```bash
+# CodeBuddy
+cp -r anti-seo-researcher/ your-project/.codebuddy/skills/
+
+# Cursor
+cp -r anti-seo-researcher/ your-project/.cursor/skills/
+```
+
+或者通过 Git 克隆：
+
+```bash
+git clone https://github.com/AmosHc/ai-skill-anti-seo-researcher.git
+```
+
+环境要求：Python >= 3.6（仅使用标准库，无需 pip 安装任何依赖），以及一个支持 Skills 的 AI 编程助手（必须提供 `web_search` 和 `web_fetch` 工具）。
+
+### 使用方式
+
+安装完成后，直接用自然语言描述你的购买需求即可。工具会自动检测你的语言，并适配对应地区的平台和搜索策略。
+
+**中文：**
+```
+帮我调研一下3000元以内的人体工学椅，主要打游戏用，每天坐6小时以上
+
+想给宝宝买奶粉，预算300-350一罐，6个月大，主要关注安全性和消化吸收
+
+预算5000左右的手机，主要拍照和日常使用，不玩游戏
+```
+
+**English:**
+```
+Research the best ergonomic office chairs under $500, I work from home and sit 8+ hours daily
+
+Looking for baby formula for my 6-month-old, budget around $30-40, mainly concerned about safety and digestion
+
+Best noise-cancelling headphones under $300 for commuting and office use
+```
+
+**日本語：**
+```
+予算5万円以内のゲーミングチェアを調べてください。毎日6時間以上座ります
+
+赤ちゃん用のミルクを探しています。予算は2000-3000円、安全性重視
+```
+
+工具会自动完成整个流程——从搜索、过滤、评分到生成最终调研报告，报告以你使用的语言输出，包含推荐/避坑结论、评分表格、真实用户引用和数据来源。
+
+---
+
+## 解决什么问题
+
+当你想买一个产品时，搜索引擎给你的大部分是广告内容：付费问答、网红合作、联盟营销测评博客、品牌赞助的"测评"。真正有价值的消费者反馈隐藏在电商追评（使用半年后产品真实表现）、推广帖评论区（"我也买了，翻车了"）、垂直论坛的详细吐槽帖、以及问答评论区的反驳中。
+
+这个工具**自动搜索你所在市场的全网真实用户反馈，用算法过滤广告和软文，从多个维度为候选产品评分，并生成包含推荐/避坑结论的调研报告。**
+
+## 多语言与多地区支持
+
+工具自动适配任何语言和地区。当你提问时，AI 会检测你的语言并动态生成所有地区专属配置——要搜索的平台、搜索查询模板、营销信号词典和报告标签——全部针对你的市场定制。
+
+| 地区 | 电商平台 | 社交/论坛 | 监管机构 |
+|------|---------|----------|---------|
+| 中国 | 京东、淘宝、拼多多 | 知乎、小红书、V2EX、Chiphell、NGA | 国家市场监管总局、国家药监局 |
+| 美国/英国 | Amazon、Best Buy、Walmart | Reddit、YouTube、Head-Fi、Wirecutter | FDA、CPSC、FTC |
+| 日本 | Amazon.co.jp、乐天、价格.com | 5ch、价格.com 论坛、Twitter/X | 厚生劳动省、消费者厅 |
+| 韩国 | Coupang、Naver Shopping | Naver Cafe、DC Inside、Clien | 食药处、消费者院 |
+| 欧洲 | Amazon（各国站）、Trustpilot | Reddit、各国论坛 | EFSA、各国机构 |
+
+地区平台列表、搜索模板和营销信号词典全部由 AI 根据你的语言**动态生成**，而非硬编码。这意味着工具支持任何地区，包括上面没有列出的地区。
+
+## 核心能力
+
+### 三层数据源搜索
+
+| 层级 | 数据源 | 价值 |
+|------|-------|------|
+| 电商评论 | 各地区电商平台的真实买家评论（间接搜索） | 花了真金白银的买家，长期追评反馈 |
+| 评论区 | 社交平台的评论区内容（间接搜索） | 推广内容下的真实"打脸"反馈 |
+| 论坛帖子 | 各地区社区论坛和爱好者网站 | 深度使用体验帖和对比分析 |
+
+电商评论和社交评论区是动态加载内容，搜索引擎无法直接索引。工具使用**间接搜索策略**（搜索"评论汇总"、"差评合集"、"追评总结"等）来获取这些高价值数据。
+
+### 双层可信度过滤
+
+第一层是正则规则引擎，包含 100+ 条规则识别营销信号（推广用语、零缺陷描述、联盟链接、利益诱导评价）和真实性信号（使用时长、缺陷描述、售后经历）。第二层是 AI 语义分析，针对灰色地带内容从 5 个维度评估：语气真实性、叙事逻辑、细节丰富度、情感一致性、利益披露。双层方案在保持过滤精度的同时，节省约 40-50% 的 AI 调用成本。
+
+### 品类自适应
+
+不同产品品类有完全不同的消费决策因素。工具根据你的需求自动生成品类专属配置，驱动后续所有差异化行为。例如，婴儿奶粉聚焦成分安全性和召回事件，安全阈值最严格；手机聚焦 SoC 性能、续航和散热；办公椅聚焦久坐舒适度和网面耐久性。
+
+### 安全事件筛查
+
+每个候选品牌都会经过专门的安全事件搜索，覆盖召回、致死事件、禁令、诉讼、监管处罚（使用你所在地区对应的监管机构），以及品类特定的安全风险。存在严重安全问题的产品，无论其他维度评分多高，都会被强制降级。
+
+## 工作流程
+
+| 步骤 | 具体操作 |
+|------|---------|
+| 需求确认 | 确认品类、预算、使用场景 |
+| 品类分析 | 自动生成品类 + 地区配置，驱动后续所有行为 |
+| 三层搜索 | 电商评论 + 评论区 + 论坛帖子，覆盖地区平台 |
+| 内容抓取 | 抓取有价值帖子的全文内容 |
+| 参数提取 | 从内容中提取结构化产品参数 |
+| 动态深挖 | 负面长尾搜索 + 高频型号的电商评论深度挖掘 |
+| 安全搜索 | 搜索候选品牌的安全事件 |
+| 可信度评估 | 正则预过滤 + AI 深度分析，过滤广告和软文 |
+| 冲突仲裁 | 加权解决不同来源的矛盾评价 |
+| 多维评分 | 按品类维度评分 + 安全封顶 |
+| 报告生成 | 以用户语言输出调研报告 |
+
+## 评分体系
+
+### 可信度评分
+
+每条搜索结果获得 0-100 的可信度评分。85 分以上为高度可信（带具体缺陷描述的长期反馈），60-84 分为一般可信，30-59 分进入灰色地带触发 AI 分析，30 分以下疑似软文直接过滤。
+
+### 产品综合评分
+
+| 分数 | 结论 |
+|------|------|
+| >= 70 | 推荐 |
+| 55-69 | 有条件推荐 |
+| 40-54 | 谨慎 |
+| < 40 | 避坑 |
+
+### 安全封顶机制
+
+即使产品在其他维度评分很高，安全问题也会强制封顶综合评分。食品/婴儿用品封顶 30 分（最严格），个人护理品封顶 25 分，电子产品封顶 20 分，耐用品封顶 15 分。
+
+## 项目结构
+
+```
+anti-seo-researcher/
+├── SKILL.md                          # Skill 定义（工作流、规则、Schema）
+├── references/
+│   ├── SKILL_REFERENCE.md            # 详细参考手册
+│   └── credibility_rules.md          # 可信度评估规则
+├── scripts/
+│   ├── platform_search.py            # 多平台搜索引擎（三层数据源）
+│   ├── credibility_scorer.py         # 可信度评分引擎（正则 + AI 融合）
+│   ├── ai_credibility_analyzer.py    # AI 语义分析评分器
+│   ├── deep_dive_search.py           # 动态深度搜索（负面长尾 + 安全）
+│   ├── conflict_resolver.py          # 证据冲突仲裁器
+│   ├── brand_scorer.py               # 多维评分引擎（安全封顶）
+│   └── generate_report.py            # 报告生成器
+├── examples/
+│   ├── task_config_gaming_chair.json          # 示例：电竞椅（中文）
+│   ├── category_profile_gaming_chair.json     # 示例：电竞椅配置（中文）
+│   ├── task_config_office_chair_en.json       # 示例：办公椅（英文）
+│   └── category_profile_office_chair_en.json  # 示例：办公椅配置（英文）
+├── README.md
+├── LICENSE
+└── .gitignore
+```
+
+## 贡献
+
+欢迎提交 Issue 和 Pull Request。特别欢迎以下方向的贡献：新地区的品类配置示例、新市场的平台搜索适配器、特定语言的可信度规则优化、以及新地区/语言支持。
+
+## 许可证
 
 [MIT](LICENSE)
