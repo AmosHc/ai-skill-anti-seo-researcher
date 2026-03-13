@@ -1,152 +1,127 @@
-# 可信度评判规则参考手册（V2）
+# Credibility Assessment Rules Reference
 
-## 一、软文/公关稿识别特征
+> This document describes universal credibility rules. Region-specific keywords, marketing signals, and platform weights are loaded from `category_profile` at runtime. The patterns below are EXAMPLES — the actual patterns used depend on the user's locale.
 
-以下特征的出现会降低内容可信度评分：
+## 1. Sponsored/Ad Content Identification
 
-### 高权重负面信号（每命中一条扣 20-30 分）
+The following patterns lower credibility scores. Specific keywords vary by language and region (loaded from `category_profile.marketing_signals`).
 
-1. **包含购买链接或优惠码**：正文中嵌入电商链接、优惠券代码、返利链接
-2. **首段即品牌全称+型号**：真实用户很少在第一句就精确写出"品牌全称+型号+产品线"的完整写法
-3. **全文零缺点**：真实的长期使用反馈几乎不可能完全没有任何负面感受
-4. **使用大量营销话术**：如"颠覆性"、"黑科技"、"业界天花板"、"强烈推荐入手"等
-5. **图片为官方宣传图**：使用白底产品图、场景渲染图，而非实拍
-6. **【V2 新增】新兴营销话术**：如"遥遥领先"、"泰裤辣"、"拿捏了"、"绝了家人们"、"全网最低"、"手慢无"等
+### High-weight Negative Signals (each match: -20 to -30 points)
 
-### 中权重负面信号（每命中一条扣 10-15 分）
+1. **Contains purchase links or promo codes**: Embedded e-commerce links, coupon codes, affiliate links in body text
+2. **Opens with full brand name + model**: Real users rarely write the complete "Brand + Model + Product Line" in the first sentence
+3. **Zero defects throughout**: Genuine long-term use reviews almost always mention at least one negative
+4. **Heavy marketing language**: Excessive superlatives, buzzwords, hype terms (specific terms vary by language/region)
+5. **Uses official promotional images**: Studio product photos instead of real-life photos
+6. **Trending marketing buzzwords**: Region-specific viral marketing phrases
 
-1. **行文过于规整**：段落工整、小标题分明、配图精美，更像是排版后的商业稿
-2. **发布时间集中**：同一产品的多篇好评在 1-3 天内集中出现
-3. **评论区有大量雷同回复**：如"已入手"、"种草了"、"链接在哪"
-4. **作者历史发帖高度集中于单一品类**：该账号 80% 以上的内容都是同品类推荐
-5. **内容与品牌官方话术高度重合**：用词、卖点顺序与官网/详情页一致
+### Medium-weight Negative Signals (each match: -10 to -15 points)
 
-### 低权重负面信号（每命中一条扣 5 分）
+1. **Overly polished formatting**: Clean paragraphs, neat subheadings, professional images — resembles commercial content
+2. **Clustered posting times**: Multiple positive reviews for the same product appearing within 1-3 days
+3. **Repetitive comment patterns**: Many comments with identical phrases (astroturfing indicators)
+4. **Author history concentrated in one category**: 80%+ of the account's content is recommendations in the same category
+5. **Content mirrors brand's official messaging**: Wording, feature order matches the official product page
 
-1. **标题含"测评"、"推荐"、"必买"等引流词**
-2. **文末有"关注我获取更多好物推荐"等引流话术**
-3. **在多个平台发布高度相似的内容**
+### Low-weight Negative Signals (each match: -5 points)
 
-## 二、真实用户反馈的正面信号
+1. **Title contains clickbait/review keywords**: Review, must-buy, guide, top picks (in local language)
+2. **Call-to-action at the end**: "Follow for more recommendations" type prompts
+3. **Cross-posted with identical content**: Same text posted on multiple platforms
 
-以下特征的出现会提升内容可信度评分：
+## 2. Genuine User Feedback Signals
 
-### 高权重正面信号（每命中一条加 20-30 分）
+The following patterns increase credibility scores. Specific expressions vary by language (loaded from `category_profile.authenticity_signals`).
 
-1. **明确的使用时长**：如"用了8个月"、"买了两年"、"半年后回来更新"
-2. **具体的缺点描述**：如"扶手的塑料件3个月就松了"、"夏天坐着背部闷热"
-3. **使用前后对比**：如"之前用的XX品牌，换了这个之后……"
-4. **包含实拍图（非官方图）**：背景杂乱、光线自然、有生活痕迹的照片
-5. **涉及售后经历**：描述了退换货、客服沟通等真实消费经历
+### High-weight Positive Signals (each match: +20 to +30 points)
 
-### 中权重正面信号（每命中一条加 10-15 分）
+1. **Clear usage duration**: "Used for 8 months", "Bought 2 years ago", "Came back to update after 6 months"
+2. **Specific defect descriptions**: Concrete physical issues observed over time
+3. **Before/after comparisons**: "Previously used Brand X, switched to this one and..."
+4. **Real-life photos (not official)**: Cluttered background, natural lighting, signs of daily life
+5. **After-sales experience**: Describes returns, customer service interactions, warranty claims
 
-1. **语言口语化、不工整**：有错别字、语气词、断句不规范
-2. **回复其他用户的追问**：在评论区回应具体使用问题
-3. **账号发帖主题多元**：发过多种不同话题的内容
-4. **包含价格购买信息**：提到具体购买价格、购买渠道、是否等到促销
-5. **【V3 升级】品类专属体验信号**（由 AI 通过 category_profile 动态定义）：不同品类有不同的真实体验信号特征。例如母婴品类的"转奶""月龄"，人体工学椅品类的"身高体重坐感匹配"，美妆品类的"肤质类型和使用场景描述"。这些信号从 `category_profile.category_positive_signals` 动态加载，不再硬编码。
-6. **【V2 新增】长期使用变化描述**：包含"一开始...后来..."、"第一周...现在..."等时间变化叙事
+### Medium-weight Positive Signals (each match: +10 to +15 points)
 
-### 低权重正面信号（每命中一条加 5 分）
+1. **Casual, imperfect language**: Typos, filler words, incomplete sentences
+2. **Responds to follow-up questions**: Answers specific usage questions in comments
+3. **Diverse posting history**: Account posts about many different topics
+4. **Contains purchase details**: Mentions specific price paid, where purchased, whether they waited for a sale
+5. **Category-specific experience signals**: Loaded dynamically from `category_profile.category_positive_signals`
+6. **Long-term change narrative**: Contains "at first... but later..." temporal progression
 
-1. **帖子发布时间与购买时间有合理间隔**
-2. **在小众论坛或板块发布**（非品类热门区）
-3. **关注者/粉丝数较少的普通用户**
-4. **【V2 新增】近期内容（时效性加分）**：来自即时搜索窗口（90天内）的内容获得额外加分
+### Low-weight Positive Signals (each match: +5 points)
 
-## 三、平台可信度权重
+1. **Reasonable time gap between purchase and posting**
+2. **Posted in niche forum or sub-community** (not category hot zone)
+3. **Low follower count / ordinary user**
+4. **Recent content (recency bonus)**: Content from the 90-day instant search window gets extra points
 
-不同平台的基础可信度权重不同：
+## 3. Platform Credibility Weights
 
-| 平台 | 基础权重 | 说明 |
-|------|----------|------|
-| V2EX | 0.9 | 技术社区，软文密度低，用户辨别力强 |
-| Chiphell | 0.9 | 硬核数码论坛，用户专业度高 |
-| NGA | 0.85 | 垂直社区，水军渗透率相对低 |
-| 豆瓣 | 0.8 | 文艺社区，消费讨论相对真实 |
-| 什么值得买（原创长文） | 0.65 | 原创长文质量较高，但有返利机制需注意 |
-| 贴吧（细分吧） | 0.75 | 细分贴吧真实讨论多，但也有水军 |
-| 知乎（综合） | 0.55 | 综合权重，高赞拉低平均值 |
-| 知乎（低赞回答） | 0.7 | 低赞但详实的回答往往更真实 |
-| 知乎（高赞回答） | 0.4 | 高赞回答商业化严重，需额外审查 |
-| 小红书 | 0.3 | 种草平台，软文基础概率高，需严格过滤 |
-| 什么值得买（好价/爆料） | 0.5 | 带返利的内容可信度打折 |
+Platform weights are defined in `category_profile.platform_relevance` and `category_profile.regional_platforms`. Below are REFERENCE values for common regions:
 
-## 四、综合评分计算
+### China (zh-CN) Reference Weights
 
-### V1 模式（纯正则）
+| Platform | Base Weight | Notes |
+|----------|-------------|-------|
+| V2EX | 0.9 | Tech community, low ad density |
+| Chiphell | 0.9 | Hardcore tech forum, expert users |
+| NGA | 0.85 | Vertical community, lower astroturfing |
+| Douban | 0.8 | Cultural community, relatively authentic |
+| Baidu Tieba (niche) | 0.75 | Niche sub-forums have real discussions |
+| SMZDM (original) | 0.65 | Original long-form is decent, but has affiliate mechanisms |
+| Zhihu (overall) | 0.55 | High-upvote answers often commercial |
+| Zhihu (low-vote) | 0.7 | Low-vote but detailed answers tend to be genuine |
+| Zhihu (high-vote) | 0.4 | High-vote answers are heavily commercialized |
+| Xiaohongshu | 0.3 | Social commerce, high baseline ad probability |
 
-最终可信度评分 = 基础平台权重 x 100 + 正面信号得分 - 负面信号得分
+### US/English (en-US) Reference Weights
 
-### 【V2 新增】双层融合评分
+| Platform | Base Weight | Notes |
+|----------|-------------|-------|
+| Reddit (niche subreddits) | 0.85 | Community moderation, lower ad density |
+| Head-Fi / AVSForum | 0.9 | Enthusiast forums, expert users |
+| Amazon (verified purchase) | 0.7 | Verified buyers, but incentivized reviews exist |
+| YouTube (comments) | 0.5 | Mixed quality, some astroturfing |
+| Wirecutter (comments) | 0.75 | Quality audience |
+| Slickdeals | 0.65 | Deal-focused but real user feedback |
+
+### Japan (ja-JP) Reference Weights
+
+| Platform | Base Weight | Notes |
+|----------|-------------|-------|
+| Kakaku.com | 0.8 | Price comparison + reviews, relatively trusted |
+| 5ch | 0.75 | Anonymous forum, raw opinions |
+| Amazon.co.jp (verified) | 0.7 | Verified purchase reviews |
+
+## 4. Scoring Calculation
+
+### Layer 1: Regex Pre-filter
 
 ```
-第一层：正则快速粗筛
-  正则分 = 基础平台权重 x 100 + 正面信号得分 - 负面信号得分
-
-第二层：AI 语义深度分析（仅对灰色地带 30-85 分的帖子触发）
-  AI分 = 语气真实性(0-20) + 论述逻辑(0-20) + 细节丰富度(0-20)
-        + 情感一致性(0-20) + 利益关联判断(0-20)
-
-融合层：
-  当有完整正文（>=200字）时：最终分 = 正则分 x 0.3 + AI分 x 0.7
-  当仅有摘要（<200字）时：最终分 = 正则分 x 0.6 + AI分 x 0.4
-  当 AI 分析失败或跳过时：最终分 = 正则分 x 1.0（回退）
+Regex Score = Base platform weight x 100 + positive signal score - negative signal score
 ```
 
-### AI 语义分析五维度说明
+### Layer 2: AI Semantic Deep Analysis (only for gray zone 30-85 scores)
 
-| 维度 | 评估内容 | 满分标志 | 零分标志 |
-|------|----------|----------|----------|
-| 语气真实性 | 语言是否自然口语化 | 有个人情绪波动、犹豫和不确定性 | 高度规范化、模板写作 |
-| 论述逻辑 | 叙事是否自然流畅 | 有时间线索、因果逻辑 | 卖点逐一罗列、像产品说明书 |
-| 细节丰富度 | 是否有独特个人细节 | 具体使用场景、精确时间、非标准细节 | 全是公开参数规格 |
-| 情感一致性 | 情感是否与内容匹配 | 真实的纠结和权衡 | 一边倒、缺点敷衍（伪缺点） |
-| 利益关联判断 | 是否有商业引导 | 无链接、无优惠码、无引流 | 明显商业合作痕迹 |
+```
+AI Score = Tone authenticity (0-20) + Narrative logic (0-20) + Detail richness (0-20)
+         + Emotional consistency (0-20) + Interest disclosure (0-20)
+```
 
-**伪缺点识别**：AI 特别关注"缺点描述无关痛痒而核心功能全满分"的模式。例如"唯一缺点是包装盒一般"，核心功能评价全部正面——这是高级软文的常见手法。
+### Fusion Layer
 
-### AI 成本控制策略
+```
+With full text (≥200 chars): Final = Regex x 0.3 + AI x 0.7
+With snippet only (<200 chars): Final = Regex x 0.6 + AI x 0.4
+AI analysis failed/skipped: Final = Regex x 1.0 (fallback)
+```
 
-| 策略 | 说明 | 预期效果 |
-|------|------|----------|
-| 灰色地带过滤 | 只对正则分 30-85 的帖子调用 AI | 约减少 40-50% AI 调用 |
-| 批量上限 | 单次调查最多 AI 分析 20 条帖子 | 成本封顶 |
-| 缓存机制 | 相同 URL 的帖子分析结果缓存到本地 JSON | 重复调查时零成本 |
+### Score Levels
 
-### 评分等级
-
-- 80 分以上：高可信度，纳入核心参考
-- 60-79 分：中可信度，作为辅助参考
-- 40-59 分：低可信度，仅在无更好来源时参考
-- 40 分以下：疑似软文/水军，排除
-
-## 五、【V2 新增】安全事件专项搜索
-
-对每个候选推荐品牌/型号，执行全网安全事件搜索，搜索关键词包括：
-
-- 食品安全类：召回、下架、禁售、通报、处罚、检测不合格、超标、污染、毒素、细菌、异物、变质
-- 产品安全类：自燃、爆炸、漏电、触电、起火、烫伤
-- 监管动作类：市场监管、食药监、FDA、EFSA、海关、黑名单
-- 舆论事件类：曝光、暴雷、翻车、丑闻、造假、欺诈
-
-安全事件搜索结果的信息源会被标注为以下类型：
-- 社区讨论（默认）
-- 新闻报道
-- 官方通告（市场监管总局/FDA/EFSA等）
-- 电商评论
-- 安全警报（召回通知等）
-
-如果安全事件搜索发现某品牌存在重大安全事件（如召回、毒素超标），该品牌不应出现在"推荐"类别，而应出现在"避坑/安全风险警告"类别。
-
-## 六、【V2 新增】搜索时效性策略
-
-采用双时间窗搜索策略确保消息源的即时性：
-
-| 窗口 | 时间范围 | 目的 | 时效性加分 |
-|------|----------|------|------------|
-| 即时窗口 | 最近 90 天 | 确保不漏掉近期事件 | +10 分 |
-| 历史窗口 | 最近 2 年 | 获取长期使用反馈 | 无 |
-
-搜索关键词自动拼接当前年份和上一年份，提升新内容的命中率。
+Labels are read from `category_profile.report_labels`:
+- 80+: High credibility — core reference
+- 60-79: Medium credibility — supplementary reference
+- 40-59: Low credibility — only when no better source available
+- Below 40: Suspected ad/astroturfing — excluded

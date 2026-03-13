@@ -1,273 +1,228 @@
-# 反SEO深度消费决策研究员 — 详细参考手册
+# Anti-SEO Deep Consumer Researcher — Detailed Reference Manual
 
-> 本文档是 SKILL.md 的补充参考。AI 执行核心流程时只需读取 SKILL.md，遇到不确定的细节才查阅本文档。
+> This document supplements SKILL.md. The AI only needs SKILL.md for the core workflow; consult this document for uncertain details.
 
-## 一、category_profile 详细设计说明
+## 1. category_profile Design Reference
 
-### 各字段的设计意图
+### Field Design Intent
 
-**evaluation_dimensions**：AI 根据品类的消费决策逻辑推理生成。维度数量3-6个，单维度权重不超过0.4，所有权重之和必须=1.0。每个维度包含 key_parameters（该维度需要采集的具体参数名）和 data_sources（该维度最佳的数据获取途径）。
+**locale / language / currency**: Drive ALL region-specific behavior. The AI detects these from the user's query and sets them in the profile. Every downstream script reads these fields to determine which platform configs, search templates, and labels to use.
 
-**platform_relevance**：AI 根据品类动态调整每个平台的可信度权重。不同品类的讨论生态差异很大：
-- 数码品类：chiphell 可调至 0.95（硬核数码论坛）
-- 美妆品类：xiaohongshu 可调至 0.5（小红书对美妆讨论价值较高）
-- 母婴品类：默认权重即可，但可适当提高 tieba（妈妈吧讨论真实度高）
+**evaluation_dimensions**: AI generates based on the category's consumer decision logic. 3-6 dimensions, max 0.4 weight per dimension, all weights must sum to 1.0. Each dimension includes key_parameters (specific parameters to collect) and data_sources (best data sources for this dimension).
 
-**category_positive_signals**：替代硬编码的品类正面信号。不同品类的真实反馈有不同的特征：
-- 母婴品类：提到"转奶"、"月龄"、"便便"等真实喂养细节
-- 人体工学椅：提到"身高体重"和"坐感匹配"
-- 美妆品类：提到"肤质类型"和"使用场景"
-- 数码品类：提到"具体帧率数据"、"温度实测"
+**platform_relevance**: AI dynamically adjusts each platform's credibility weight based on category. Different categories have very different discussion ecosystems:
+- Tech/digital: Enthusiast forums get highest weight (Chiphell/Head-Fi/AVSForum)
+- Beauty/skincare: Social platforms get higher weight (Xiaohongshu/Reddit r/SkincareAddiction)
+- Baby products: Parenting communities get higher weight (BabyCenter/Tieba mom forums)
 
-**non_commercial_indicators**：该品类的非商业信息源。例如食品品类的"食品安全检测机构报告"、数码品类的"独立硬件评测站（非品牌赞助）"。
+**regional_platforms**: The AI generates this based on detected locale. This is the most critical regionalization field — it defines which platforms exist in the user's market, their domains for `site:` searches, and their base credibility weights.
 
-**commercial_bias_sources**：容易存在商业偏见的信息源，如"品牌官方旗舰店评论"、"带返利链接的评测"。
+**marketing_signals**: Region-specific manipulation patterns. Each region has different advertising tactics:
+- China: "zhong cao" (种草) culture, WeChat marketing, fake review patterns
+- US: Affiliate disclaimers, Amazon Vine, influencer partnerships
+- Japan: Stealth marketing (ステマ), PR articles
+- Universal: Excessive superlatives, zero-defect reviews, brand-voice mimicry
 
-**【V5 新增】ecommerce_search_strategy**：电商评论间接搜索策略。AI 根据品类特性生成针对性的电商评论搜索模板。
-- `primary_platforms`：优先搜索的电商平台（如京东、淘宝、拼多多）
-- `search_templates`：分三类——`review_aggregation`（评论汇总）、`negative_reviews`（差评搜索）、`long_term_reviews`（追评搜索）
-- `high_value_indicators`：电商评论中的高价值信号词（如"追评"、"用了几个月后"），命中时提升可信度
-- `low_value_indicators`：低价值信号词（如"默认好评"、"好评返现"），命中时降低可信度
+**authenticity_signals**: Region-specific indicators of genuine reviews:
+- Long-term use phrases in the target language
+- Defect/complaint vocabulary
+- Purchase proof terms
+- Time unit expressions
 
-设计意图：电商平台评论区的内容无法被搜索引擎直接索引（动态加载），但其中的追评和差评是消费决策中信息密度最高、软广成本最高的数据源。通过间接搜索策略（搜索"评论搬运帖"、"追评汇总"、"差评合集"等）可以获取这些高价值信息。
+**ecommerce_search_strategy**: E-commerce review indirect search strategy. AI generates platform-appropriate templates:
+- `primary_platforms`: Regional e-commerce platforms (JD/Taobao for China, Amazon for US, Rakuten for Japan)
+- `search_templates`: Three categories — `review_aggregation`, `negative_reviews`, `long_term_reviews`
+- `high_value_indicators`: Follow-up review signals in target language
+- `low_value_indicators`: Fake/incentivized review indicators in target language
 
-**【V5 新增】comment_section_strategy**：社交评论区间接搜索策略。
-- `primary_platforms`：优先搜索的社交平台（如小红书、知乎）
-- `search_templates`：分两类——`debunk_feedback`（拔草反馈）、`experience_sharing`（实际体验分享）
-- `high_value_indicators`：评论区高价值信号词（如"我也买了"、"同款翻车"）
-- `low_value_indicators`：低价值信号词（如"求链接"、"已入手"）
+**comment_section_strategy**: Social comment section indirect search strategy:
+- `primary_platforms`: Regional social platforms (Xiaohongshu/Zhihu for China, Reddit/YouTube for US)
+- `search_templates`: Two categories — `debunk_feedback`, `experience_sharing`
 
-设计意图：种草帖的正文可能是软广，但评论区经常出现真实的"拔草"反馈。这种"种草→拔草"链条上的信息具有独特的参考价值。
+**report_labels**: All UI-facing text labels in the user's language. Scripts use these for output instead of hardcoded strings.
 
-### 品类示例参考
+**safety_search_config**: Region-specific safety search configuration:
+- `general_keywords`: Recall/safety terms in target language
+- `regulatory_keywords`: Regional regulatory body names
+- `source_domains`: Authoritative regulatory and news domains for the region
 
-**食品类（奶粉）**：
-- 维度：配方品质30%/安全记录25%/真实口碑25%/性价比20%
-- safety_risk_types.critical：蜡样芽孢杆菌、阪崎肠杆菌、三聚氰胺
-- has_variant_issue: true（国行vs海外版）
+### Category Examples by Region
 
-**电子产品（手机）**：
-- 维度：游戏性能30%/屏幕体验20%/续航充电20%/品控质量15%/性价比15%
-- safety_risk_types.critical：自燃、爆炸、电池膨胀
-- chiphell权重调高至0.95
+**Food (Baby Formula) — China Market**:
+- Dimensions: Formula quality 30% / Safety record 25% / Real user feedback 25% / Value 20%
+- safety_risk_types.critical: Cronobacter sakazakii, Bacillus cereus, melamine
+- regulatory_authorities: SAMR, CFDA
+- ecommerce: JD.com, Taobao follow-up reviews
 
-**耐用品（人体工学椅）**：
-- 维度：人体工学设计/材质做工/安全耐久/舒适口碑/性价比
-- safety_risk_types.critical：气压棒爆炸、座椅倾倒
+**Food (Baby Formula) — US Market**:
+- Dimensions: Ingredients quality 30% / Safety record 25% / Real user feedback 25% / Value 20%
+- safety_risk_types.critical: Cronobacter contamination, heavy metals, FDA recall
+- regulatory_authorities: FDA, CPSC
+- ecommerce: Amazon verified purchase reviews, Walmart reviews
 
-**个人护理（防晒霜）**：
-- 维度：防晒力/安全性/使用感受/成分分析/性价比
-- xiaohongshu权重可调至0.5
+**Electronics (Phone) — Global**:
+- Dimensions: Performance 30% / Display 20% / Battery 20% / Build quality 15% / Value 15%
+- safety_risk_types.critical: Battery fire, explosion, overheating
+- Enthusiast forums: Chiphell (CN), XDA/Reddit (US), Kakaku (JP)
 
-### 【V5 新增】电商评论搜索策略品类差异
+**Durable Goods (Ergonomic Chair) — China Market**:
+- Dimensions: Ergonomic design / Material & build / Safety & durability / Comfort / Value
+- safety_risk_types.critical: Gas cylinder explosion, seat collapse
+- Forums: V2EX, Chiphell (CN)
 
-不同品类在电商平台上的评论生态差异很大，AI 生成 `ecommerce_search_strategy` 时需要考虑：
+**Durable Goods (Office Chair) — US Market**:
+- Dimensions: Ergonomic design / Material & build / Durability / Comfort / Value
+- safety_risk_types.critical: Gas cylinder failure, tilt mechanism failure
+- Forums: Reddit r/officechairs, Reddit r/ErgonomicSetups
 
-**高客单价耐用品（人体工学椅/家电/床垫）**：
-- 追评价值极高——用户购买3-6个月后的追评是最有价值的信息
-- 重点搜索：`[型号] 京东追评 半年 一年 问题`
-- high_value_indicators：应包含"追评"、"补充评价"、"用了几个月后"
+### E-commerce Search Strategy Differences by Category
 
-**快消品（奶粉/零食/日化）**：
-- 追评价值中等——使用周期短，首次评价即有参考价值
-- 重点搜索：`[品牌] 淘宝差评 过敏 不良反应`
-- 差评中的安全信号更重要
+**High-ticket Durables (chairs/appliances/mattresses)**:
+- Follow-up reviews are extremely valuable — 3-6 month post-purchase reviews
+- Focus search: "[model] long-term review 6 months problems"
+- high_value_indicators: "follow-up review", "update after 6 months", "long-term use"
 
-**数码产品（手机/耳机/显示器）**：
-- 京东评论质量高于淘宝（京东自营退换政策使差评更真实）
-- 追评和差评都有很高价值
-- 重点搜索：`[型号] 京东评论 差评 质量 售后`
-- high_value_indicators：应包含"追评"、"老化"、"用了一年"
+**FMCG (formula/snacks/toiletries)**:
+- Follow-up review value is moderate — short use cycle
+- Focus search: "[brand] negative review allergy adverse reaction"
+- Safety signals in negative reviews are most important
 
-**美妆个护（护肤品/化妆品）**：
-- 小红书评论区 > 电商评论（使用感受更详细）
-- 电商差评中的过敏信息很重要
-- comment_section_strategy 的权重应高于 ecommerce_search_strategy
+**Digital Products (phones/headphones/monitors)**:
+- Negative reviews and follow-up reviews both highly valuable
+- Focus search: "[model] review defect quality customer service"
 
-## 二、搜索策略详细说明
+**Beauty/Personal Care (skincare/cosmetics)**:
+- Social comment sections > e-commerce reviews (more detailed usage feelings)
+- Allergy information in negative reviews is critical
 
-### 搜索关键词构造模板
+## 2. Search Strategy Reference
 
-**中性事实搜索（40%）**：
+### Search Keyword Construction Templates (adapt to user's language)
+
+**Neutral factual search (40%)**:
 ```
-[商品] [品类] 评测 对比 参数
-[商品] [品类] [key_parameters中的关键参数]
-[商品] [品类] 价格 规格 配置
-```
-
-**正面体验搜索（20%）**：
-```
-[商品] [品类] 长期使用 满意 推荐
-[商品] [品类] 好评 优点
-```
-
-**负面体验搜索（40%）**：
-```
-[商品] [品类] [pain_point_keywords.quality中的关键词]
-[商品] [品类] [pain_point_keywords.experience中的关键词]
-[商品] [品类] [pain_point_keywords.trust中的关键词]
+[product] [category] review comparison specs
+[product] [category] [key_parameters]
 ```
 
-### 平台搜索命令模板
-
+**Positive experience search (20%)**:
 ```
-# 高可信度平台（按品类权重排序优先搜索）
-web_search("site:v2ex.com [品类] [痛点关键词]")
-web_search("site:chiphell.com [品类] [痛点关键词]")
-web_search("site:nga.cn [品类] [痛点关键词]")
-
-# 消费决策平台
-web_search("site:smzdm.com [品类] [痛点关键词] 原创")
-web_search("site:post.smzdm.com [品类] [痛点关键词]")
-
-# 大众讨论平台（需更多过滤）
-web_search("site:zhihu.com [品类] [痛点关键词] 长期使用")
-web_search("site:tieba.baidu.com [品类] [痛点关键词] 推荐")
-
-# 即时窗口（拼接年份）
-web_search("site:zhihu.com [品类] [痛点关键词] 2026")
-web_search("[品类] [安全关键词] 2026 2025")
+[product] [category] long-term use satisfied recommend
 ```
 
-### 安全事件搜索模板
-
+**Negative experience search (40%)**:
 ```
-# 通用安全关键词
-web_search("[品牌] 召回 下架 禁售 [当前年份]")
-web_search("[品牌] 曝光 暴雷 丑闻 翻车")
-web_search("[品牌] 市场监管 通报 处罚")
-
-# 品类特定安全关键词（从 safety_risk_types.critical 读取）
-web_search("[品牌] [safety_risk_types.critical中的关键词]")
+[product] [category] [pain_point_keywords.quality]
+[product] [category] [pain_point_keywords.experience]
+[product] [category] [pain_point_keywords.trust]
 ```
 
-### 【V5 新增】电商评论间接搜索模板
-
-由于电商平台（京东/淘宝/拼多多）的评论是动态加载内容，搜索引擎无法直接索引。通过以下间接策略获取：
+### Platform Search Command Templates
 
 ```
-# 策略1：追评汇总搜索（最高价值）
-web_search("[型号] 京东评论 追评 真实")
-web_search("[型号] 淘宝评价 追评 差评")
-web_search("[型号] 追评 用了半年 一年 使用感受")
+# High-credibility platforms (sort by category weight, use platforms from regional_platforms)
+web_search("site:<platform_domain> [category] [pain point keywords]")
 
-# 策略2：电商差评专项搜索
-web_search("[型号] 京东差评 一星 退货 原因")
-web_search("[型号] 淘宝差评 避坑 后悔 退款")
-web_search("[型号] 差评 最多的问题 真实反馈")
-
-# 策略3：电商评论搬运帖搜索
-web_search("[型号] 电商评价 真实评价 买家")
-web_search("[型号] 买家真实评价 缺点 不好")
+# Year-appended instant window
+web_search("site:<platform_domain> [category] [pain point keywords] 2026")
+web_search("[category] [safety keywords] 2026 2025")
 ```
 
-搜索到的电商评论来源内容标注 `source_layer: "L1_ecommerce"`, `base_weight: 0.85`。
-
-### 【V5 新增】评论区间接搜索模板
-
-种草帖的正文可能是软广，但评论区经常出现真实的"拔草"反馈：
+### Safety Event Search Templates
 
 ```
-# 策略1：种草→拔草链搜索
-web_search("[型号] 小红书 评论区 真实 翻车")
-web_search("[型号] 种草 买了 后悔 拔草")
-web_search("[型号] 博主推荐 评论区 和说的不一样")
+# General safety keywords (from safety_search_config.general_keywords)
+web_search("[brand] recall withdrawn banned [year]")
+web_search("[brand] safety issue warning")
 
-# 策略2：知乎评论区反馈搜索
-web_search("[型号] 知乎 评论区 实际体验 反驳")
-web_search("[型号] 买了才知道 实际体验 坑")
+# Regulatory keywords (from safety_search_config.regulatory_keywords)
+web_search("[brand] [regulatory_body] notice penalty")
+
+# Category-specific safety keywords (from safety_risk_types.critical)
+web_search("[brand] [critical_safety_risk]")
 ```
 
-搜索到的评论区来源内容标注 `source_layer: "L2_comment_section"`, `base_weight: 0.75`。
+## 3. Safety Event Classification
 
-## 三、数据结构化提取示例
+### General Layer (category-independent)
 
-第3.5步中，参数表的表头由 `evaluation_dimensions[].key_parameters` 动态生成。
+| Level | Trigger Keywords |
+|-------|-----------------|
+| CRITICAL | Global recall, death, mass recall, FDA warning, forced removal |
+| HIGH | Recall, removal, ban, regulatory notice, failed testing, exceeds limits |
+| MEDIUM | Rectification, resolved, historical issue |
+| LOW | Complaint, foreign object, odor, controversy, questioning |
 
-**人体工学椅品类**：
-| 商品型号 | 腰靠调节 | 坐深调节 | 扶手维度 | 网布类型 | 气压棒等级 | BIFMA认证 | 质保年限 |
+### Category Layer (from category_profile.safety_risk_types)
 
-**智能手机品类**：
-| 商品型号 | SoC型号 | RAM | 屏幕类型 | 刷新率 | 主摄参数 | 电池容量 | 充电功率 |
+Different categories have different critical safety risks — these are defined in the profile and vary by region.
 
-**婴儿奶粉品类**：
-| 商品型号 | DHA含量 | OPO | 乳铁蛋白 | 蛋白质来源 | 产地 | 段数 | 价格/罐 |
+### Safety Capping Rules
 
-提取来源优先级：品牌官方规格页 > 专业评测站拆解/测试 > 用户分享的实拍参数
+When safety score falls below threshold, overall score is capped at 54:
+- food: threshold 30
+- personal_care: threshold 25
+- electronics: threshold 20
+- durable_goods: threshold 15
 
-## 四、安全事件双层分级详细规则
+### Source Type Classification
 
-### 通用层（品类无关）
+Safety event search results are classified by source:
+- official_announcement: Regulatory bodies (highest weight)
+- safety_alert: Recall notices
+- news_report: News media
+- community_discussion: Community discussion
+- ecommerce_review: E-commerce reviews
 
-| 等级 | 触发关键词 |
-|------|-----------|
-| CRITICAL | 全球召回、致死、大规模召回、FDA warning、强制下架 |
-| HIGH | 召回、下架、禁售、市场监管通报、检测不合格、超标 |
-| MEDIUM | 整改、已处理、曾被、历史问题 |
-| LOW | 投诉、异物、异味、争议、质疑 |
-
-### 品类层（从 category_profile.safety_risk_types 读取）
-
-不同品类的致命安全风险不同：
-- 食品：蜡样芽孢杆菌、阪崎肠杆菌 → CRITICAL
-- 电子：自燃、爆炸、电池膨胀 → CRITICAL
-- 耐用品：气压棒爆炸、座椅倾倒 → CRITICAL
-
-### 安全封顶规则
-
-当安全分低于阈值时，综合分被封顶为54（无论其他维度多高）：
-- food: 阈值30
-- personal_care: 阈值25
-- electronics: 阈值20
-- durable_goods: 阈值15
-
-### 信息源类型标注
-
-安全事件搜索结果按来源分类：
-- official_announcement：市场监管总局/FDA/EFSA（最高权重）
-- safety_alert：召回通知
-- news_report：新闻媒体
-- community_discussion：社区讨论
-- ecommerce_review：电商评论
-
-## 五、报告输出格式
+## 4. Report Output Format
 
 ```markdown
-## 安全风险警告（仅在发现安全事件时出现）
-> 以下品牌在安全事件专项搜索中发现了潜在风险信息
+## Safety Risk Warning (only appears when safety events are found)
+> The following brands had potential risk information in safety event searches
 
-## 商品综合评分
-<!-- 表头由 category_profile.evaluation_dimensions 动态生成 -->
-| 商品型号 | [维度1] | [维度2] | ... | 安全分 | 综合分 | 置信度 | 结论 |
+## Product Scores
+<!-- Table headers dynamically generated from category_profile.evaluation_dimensions -->
+| Product | [Dim 1] | [Dim 2] | ... | Safety | Overall | Confidence | Verdict |
 
-## 调查结论
-在排除了 X 篇疑似软文后，基于 Y 条真实用户反馈，我的建议如下：
+## Research Conclusions
+After filtering X suspected ad posts, based on Y real user reviews, recommendations are:
 
-**推荐：[型号]**（综合分 XX，结论：推荐）
-- 推荐理由 + 引用真实用户原话
-- 已知缺点
-- 真实讨论来源链接
+**Recommend: [model]** (score XX, verdict: Recommend)
+- Reasons + real user quotes
+- Known defects
+- Source links
 
-**避坑：[型号]**（综合分 XX，结论：避坑）
-- 避坑理由 + 引用
-- 软文占比
+**Avoid: [model]** (score XX, verdict: Avoid)
+- Reasons + quotes
+- Ad content ratio
 
-## 品类参数对比
-<!-- 表头由 evaluation_dimensions[].key_parameters 动态生成 -->
+## Category Parameter Comparison
+<!-- Headers from evaluation_dimensions[].key_parameters -->
 
-## 数据透明度
-- 共搜索 N 个平台，获取 M 条结果
-- 过滤疑似软文 X 条
-- 最终纳入分析 Y 条真实反馈
-- AI 深度分析 Z 条帖子
-- 安全事件搜索 W 条相关结果
+## Data Transparency
+- Searched N platforms, retrieved M results
+- Filtered X suspected ads
+- Y real reviews included in analysis
+- AI deep-analyzed Z posts
+- W safety-related results found
 ```
 
-## 六、注意事项补充
+## 5. Credibility Scoring Reference
 
-1. 永远不要只搜一次。第一轮广撒网后，必须根据高频型号进行第二轮负面定向搜索。
-2. 对知乎万赞回答保持警惕。高赞回答的软文概率远高于低赞但内容详实的回答。
-3. 优先信任有具体使用时长的反馈。"用了两年"比"刚买很好"的参考价值高十倍。
-4. 主动搜索负面信息。一个产品如果搜不到任何负面反馈，说明搜索深度不够。
-5. 交叉验证是核心。同一产品如果商业评测说好但小众论坛有人抱怨，优先信任后者。
-6. category_profile 是所有品类知识的唯一来源。脚本中的硬编码字典只是 fallback。
+### AI Semantic Analysis 5 Dimensions
+
+| Dimension | Assessment | Full Score Indicator | Zero Score Indicator |
+|-----------|-----------|---------------------|---------------------|
+| Tone Authenticity | Is language natural/colloquial? | Personal emotion, hesitation, uncertainty | Highly standardized, template writing |
+| Narrative Logic | Is narrative natural and flowing? | Timeline clues, cause-effect logic | Feature-by-feature listing, like a spec sheet |
+| Detail Richness | Are there unique personal details? | Specific use scenarios, precise timing | Only public specs |
+| Emotional Consistency | Do emotions match content? | Genuine trade-offs and weighing | One-sided, trivial "cons" (fake defects) |
+| Interest Disclosure | Any commercial guidance? | No links, no coupons, no promotion | Clear commercial partnership signs |
+
+### AI Cost Control
+
+| Strategy | Description | Expected Effect |
+|----------|-------------|----------------|
+| Gray zone filter | Only invoke AI for regex scores 30-85 | ~40-50% fewer AI calls |
+| Batch cap | Max 20 posts per research session | Cost ceiling |
+| Cache | Cache analysis results by URL in local JSON | Zero cost on repeat research |

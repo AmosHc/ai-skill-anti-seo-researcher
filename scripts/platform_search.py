@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-多平台真实用户反馈搜索工具
+Multi-platform Real User Feedback Search Tool
 
-通过搜索引擎（Bing/Google）对指定的中文社区进行定向搜索，
-绕过平台自身的推荐算法，直接从搜索引擎索引中获取社区讨论内容。
+Searches consumer communities via search engines (Bing/Google),
+bypassing platform recommendation algorithms to get real discussion content.
+Supports multiple languages and regions via category_profile configuration.
 
-用法:
+Usage:
+    python platform_search.py "ergonomic chair back pain" --platforms reddit,amazon_reviews --days 365
     python platform_search.py "人体工学椅 腰肌劳损" --platforms zhihu,v2ex,smzdm --days 365 --count 20
-    python platform_search.py "显示器 4K 设计" --platforms all --days 180 --count 30 --fetch-content --limit 10
 """
 
 import argparse
@@ -25,82 +26,103 @@ from html.parser import HTMLParser
 
 
 # ============================================================
-# 平台配置
+# Default Platform Configuration (zh-CN fallback)
+# When category_profile provides regional_platforms, those take priority.
 # ============================================================
 
 PLATFORMS = {
     "zhihu": {
-        "name": "知乎",
+        "name": "Zhihu",
         "site": "zhihu.com",
-        "description": "中文问答社区，注意高赞回答可能有软文",
-        "base_weight": 0.55,  # 综合权重，高赞拉低平均值
+        "description": "Chinese Q&A community, beware of high-upvote sponsored content",
+        "base_weight": 0.55,
         "search_suffix": "",
     },
     "v2ex": {
         "name": "V2EX",
         "site": "v2ex.com",
-        "description": "技术社区，软文密度低",
+        "description": "Tech community, low ad density",
         "base_weight": 0.9,
         "search_suffix": "",
     },
     "smzdm": {
-        "name": "什么值得买",
+        "name": "SMZDM",
         "site": "smzdm.com",
-        "description": "消费决策社区，原创长文质量较高",
+        "description": "Consumer decision community, original long-form content",
         "base_weight": 0.65,
         "search_suffix": "",
     },
     "nga": {
         "name": "NGA",
         "site": "nga.cn",
-        "description": "垂直论坛社区",
+        "description": "Vertical forum community",
         "base_weight": 0.85,
         "search_suffix": "",
     },
     "tieba": {
-        "name": "百度贴吧",
+        "name": "Baidu Tieba",
         "site": "tieba.baidu.com",
-        "description": "百度贴吧，细分吧真实讨论多",
+        "description": "Baidu forums, niche sub-forums have real discussions",
         "base_weight": 0.75,
         "search_suffix": "",
     },
     "xiaohongshu": {
-        "name": "小红书",
+        "name": "Xiaohongshu",
         "site": "xiaohongshu.com",
-        "description": "种草平台，软文基础概率高",
+        "description": "Social commerce platform, high baseline ad probability",
         "base_weight": 0.3,
         "search_suffix": "",
     },
     "douban": {
-        "name": "豆瓣",
+        "name": "Douban",
         "site": "douban.com",
-        "description": "文艺社区，消费讨论相对真实",
+        "description": "Cultural community, relatively authentic consumer discussions",
         "base_weight": 0.8,
         "search_suffix": "",
     },
     "chiphell": {
         "name": "Chiphell",
         "site": "chiphell.com",
-        "description": "硬核数码论坛，用户专业度高",
+        "description": "Hardcore tech forum, highly knowledgeable users",
         "base_weight": 0.9,
         "search_suffix": "",
     },
 }
 
-# 所有平台的快捷键
 ALL_PLATFORMS = list(PLATFORMS.keys())
-
-# 默认推荐平台（排除软文重灾区）
 DEFAULT_PLATFORMS = ["zhihu", "v2ex", "smzdm", "nga", "tieba"]
 
 
+def load_platforms_from_profile(category_profile):
+    """
+    Load region-specific platform configuration from category_profile.
+    If regional_platforms is provided, it REPLACES the default PLATFORMS dict.
+    """
+    global PLATFORMS, ALL_PLATFORMS, DEFAULT_PLATFORMS
+    if category_profile and "regional_platforms" in category_profile:
+        regional = category_profile["regional_platforms"]
+        if regional:
+            PLATFORMS = {}
+            for key, config in regional.items():
+                PLATFORMS[key] = {
+                    "name": config.get("name", key),
+                    "site": config.get("site", ""),
+                    "description": config.get("description", ""),
+                    "base_weight": config.get("base_weight", 0.5),
+                    "search_suffix": config.get("search_suffix", ""),
+                }
+            ALL_PLATFORMS = list(PLATFORMS.keys())
+            # Use top-weighted platforms as defaults
+            sorted_platforms = sorted(PLATFORMS.items(), key=lambda x: x[1]["base_weight"], reverse=True)
+            DEFAULT_PLATFORMS = [k for k, v in sorted_platforms[:5]]
+            print(f"[INFO] Loaded {len(PLATFORMS)} regional platforms: {ALL_PLATFORMS}", file=sys.stderr)
+
+
 # ============================================================
-# 【V5 新增】电商评论间接搜索配置
+# E-commerce Review Indirect Search Config (zh-CN fallback)
+# Overridden by category_profile.ecommerce_search_strategy
 # ============================================================
 
-# 电商评论间接搜索关键词模板
-# 由于电商平台评论是动态加载的，搜索引擎无法直接索引
-# 通过搜索"评论搬运帖"、"追评汇总"、"差评合集"等间接获取
 ECOMMERCE_SEARCH_TEMPLATES = {
     "review_aggregation": [
         "{product} 京东评论 追评 真实",
@@ -119,20 +141,16 @@ ECOMMERCE_SEARCH_TEMPLATES = {
     ],
 }
 
-# 电商评论真实性正面指标
 ECOMMERCE_HIGH_VALUE_INDICATORS = [
     "追评", "用了几个月后", "补充评价", "再来更新",
     "买了半年", "长期使用后", "追加评论", "后续反馈",
 ]
 
-# 电商评论低价值指标（返现好评/默认好评）
 ECOMMERCE_LOW_VALUE_INDICATORS = [
     "默认好评", "好评返现", "此用户未填写评价",
     "好评返", "五星好评", "系统默认",
 ]
 
-
-# 评论区间接搜索关键词模板
 COMMENT_SECTION_SEARCH_TEMPLATES = {
     "debunk_feedback": [
         "{product} 小红书 评论区 真实 翻车",
@@ -146,17 +164,45 @@ COMMENT_SECTION_SEARCH_TEMPLATES = {
     ],
 }
 
-# 评论区高价值指标
 COMMENT_HIGH_VALUE_INDICATORS = [
     "我也买了", "同款翻车", "用了之后发现", "评论区才是真相",
     "不请自来", "买过的来说", "同款用户", "已购来反馈",
 ]
 
-# 评论区低价值指标
 COMMENT_LOW_VALUE_INDICATORS = [
     "求链接", "已入手", "好种草", "链接在哪",
     "马上下单", "已下单",
 ]
+
+
+def load_search_config_from_profile(category_profile):
+    """
+    Load region-specific search templates and indicators from category_profile.
+    Overrides the default zh-CN templates when profile provides alternatives.
+    """
+    global ECOMMERCE_SEARCH_TEMPLATES, ECOMMERCE_HIGH_VALUE_INDICATORS, ECOMMERCE_LOW_VALUE_INDICATORS
+    global COMMENT_SECTION_SEARCH_TEMPLATES, COMMENT_HIGH_VALUE_INDICATORS, COMMENT_LOW_VALUE_INDICATORS
+
+    if not category_profile:
+        return
+
+    ecom = category_profile.get("ecommerce_search_strategy", {})
+    if ecom.get("search_templates"):
+        ECOMMERCE_SEARCH_TEMPLATES = ecom["search_templates"]
+    if ecom.get("high_value_indicators"):
+        ECOMMERCE_HIGH_VALUE_INDICATORS = ecom["high_value_indicators"]
+    if ecom.get("low_value_indicators"):
+        ECOMMERCE_LOW_VALUE_INDICATORS = ecom["low_value_indicators"]
+
+    comment = category_profile.get("comment_section_strategy", {})
+    if comment.get("search_templates"):
+        COMMENT_SECTION_SEARCH_TEMPLATES = comment["search_templates"]
+    if comment.get("high_value_indicators"):
+        COMMENT_HIGH_VALUE_INDICATORS = comment["high_value_indicators"]
+    if comment.get("low_value_indicators"):
+        COMMENT_LOW_VALUE_INDICATORS = comment["low_value_indicators"]
+
+    print(f"[INFO] Loaded region-specific search config from category_profile", file=sys.stderr)
 
 
 # ============================================================
@@ -370,7 +416,7 @@ def search_ecommerce_reviews(product, count=10, days=730, category_profile=None)
             r["search_type"] = q_info["search_type"]
             r["base_weight"] = 0.85  # 电商评论层基础权重
             r["platform"] = "ecommerce_indirect"
-            r["platform_name"] = "电商评论(间接)"
+            r["platform_name"] = "E-commerce Reviews (indirect)"
             r["search_query"] = query
             r["search_time"] = datetime.now().isoformat()
 
@@ -431,7 +477,7 @@ def search_comment_sections(product, count=10, days=730, category_profile=None):
             r["search_type"] = q_info["search_type"]
             r["base_weight"] = 0.75  # 评论区层基础权重
             r["platform"] = "comment_section_indirect"
-            r["platform_name"] = "评论区(间接)"
+            r["platform_name"] = "Comment Sections (indirect)"
             r["search_query"] = query
             r["search_time"] = datetime.now().isoformat()
 
@@ -524,8 +570,48 @@ HEADERS = {
         "Chrome/120.0.0.0 Safari/537.36"
     ),
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
 }
+
+# Locale configuration (overridden by category_profile)
+_LOCALE_CONFIG = {
+    "accept_language": "en-US,en;q=0.9",
+    "bing_setlang": "en",
+    "bing_cc": "",
+}
+
+
+def configure_locale(category_profile):
+    """Configure HTTP headers and search params based on detected locale."""
+    global _LOCALE_CONFIG
+    if not category_profile:
+        return
+
+    locale = category_profile.get("locale", "")
+    language = category_profile.get("language", "")
+
+    locale_map = {
+        "zh-CN": {"accept_language": "zh-CN,zh;q=0.9,en;q=0.8", "bing_setlang": "zh-Hans", "bing_cc": "CN"},
+        "zh-TW": {"accept_language": "zh-TW,zh;q=0.9,en;q=0.8", "bing_setlang": "zh-Hant", "bing_cc": "TW"},
+        "en-US": {"accept_language": "en-US,en;q=0.9", "bing_setlang": "en", "bing_cc": "US"},
+        "en-GB": {"accept_language": "en-GB,en;q=0.9", "bing_setlang": "en", "bing_cc": "GB"},
+        "ja-JP": {"accept_language": "ja-JP,ja;q=0.9,en;q=0.8", "bing_setlang": "ja", "bing_cc": "JP"},
+        "ko-KR": {"accept_language": "ko-KR,ko;q=0.9,en;q=0.8", "bing_setlang": "ko", "bing_cc": "KR"},
+        "de-DE": {"accept_language": "de-DE,de;q=0.9,en;q=0.8", "bing_setlang": "de", "bing_cc": "DE"},
+        "fr-FR": {"accept_language": "fr-FR,fr;q=0.9,en;q=0.8", "bing_setlang": "fr", "bing_cc": "FR"},
+    }
+
+    if locale in locale_map:
+        _LOCALE_CONFIG = locale_map[locale]
+    elif language:
+        # Fallback: try language code alone
+        for loc, cfg in locale_map.items():
+            if loc.startswith(language):
+                _LOCALE_CONFIG = cfg
+                break
+
+    HEADERS["Accept-Language"] = _LOCALE_CONFIG["accept_language"]
+    print(f"[INFO] Locale configured: {locale or language} -> Accept-Language: {_LOCALE_CONFIG['accept_language']}", file=sys.stderr)
 
 
 def fetch_url(url, timeout=15):
@@ -603,9 +689,11 @@ def search_bing(query, site=None, count=10, days=None):
     params = {
         "q": search_query,
         "count": min(count, 50),
-        "setlang": "zh-Hans",
-        "cc": "CN",
+        "setlang": _LOCALE_CONFIG.get("bing_setlang", "en"),
     }
+    # Only add country code if configured
+    if _LOCALE_CONFIG.get("bing_cc"):
+        params["cc"] = _LOCALE_CONFIG["bing_cc"]
 
     # 【V2 修复】实际启用 Bing 时间过滤参数
     if days:
@@ -966,15 +1054,19 @@ def assess_result_sufficiency(results, candidate_products=None, category_profile
             ],
         })
 
-    # 数据充分度等级
+    # Data sufficiency level (read labels from profile or use English defaults)
+    labels = {}
+    if category_profile and "report_labels" in category_profile:
+        labels = category_profile["report_labels"]
+
     if total >= min_total * 2 and not underserved:
-        sufficiency_level = "充分"
+        sufficiency_level = labels.get("sufficient", "sufficient")
     elif total >= min_total and len(underserved) <= 1:
-        sufficiency_level = "基本充分"
+        sufficiency_level = labels.get("mostly_sufficient", "mostly sufficient")
     elif total >= min_total // 2:
-        sufficiency_level = "不足"
+        sufficiency_level = labels.get("insufficient", "insufficient")
     else:
-        sufficiency_level = "严重不足"
+        sufficiency_level = labels.get("severely_insufficient", "severely insufficient")
 
     return {
         "is_sufficient": len(recommendations) == 0,
@@ -1118,12 +1210,12 @@ def main():
     parser.add_argument(
         "--ecommerce",
         action="store_true",
-        help="【V5】启用电商评论间接搜索（L1层：京东/淘宝/拼多多追评）",
+        help="Enable e-commerce review indirect search (L1 tier)",
     )
     parser.add_argument(
         "--comment-section",
         action="store_true",
-        help="【V5】启用社交评论区间接搜索（L2层：小红书/知乎评论区反馈）",
+        help="Enable social comment section indirect search (L2 tier)",
     )
     parser.add_argument(
         "--ecommerce-products",
@@ -1133,7 +1225,19 @@ def main():
 
     args = parser.parse_args()
 
-    # 解析平台列表
+    # Load category profile early for locale/platform configuration
+    category_profile_data = None
+    if args.category_profile:
+        with open(args.category_profile, "r", encoding="utf-8") as f:
+            category_profile_data = json.load(f)
+        # Configure locale and platforms from profile
+        configure_locale(category_profile_data)
+        load_platforms_from_profile(category_profile_data)
+        load_search_config_from_profile(category_profile_data)
+        print(f"[INFO] Loaded category profile: {category_profile_data.get('category', 'unknown')} "
+              f"(locale: {category_profile_data.get('locale', 'default')})", file=sys.stderr)
+
+    # Parse platform list (after profile loading, since platforms may be overridden)
     if args.platforms.lower() == "all":
         platforms = ALL_PLATFORMS
     else:
@@ -1163,12 +1267,7 @@ def main():
         append_year=args.append_year,
     )
 
-    # 【V5】加载品类配置（用于电商评论和评论区搜索）
-    category_profile_data = None
-    if args.category_profile:
-        with open(args.category_profile, "r", encoding="utf-8") as f:
-            category_profile_data = json.load(f)
-        print(f"[INFO] 已加载品类配置: {category_profile_data.get('category', '未知品类')}", file=sys.stderr)
+    # Category profile already loaded above
 
     # 【V5】电商评论间接搜索（L1 层）
     ecommerce_results = []
