@@ -87,7 +87,7 @@ cp -r anti-seo-researcher/ your-project/.cursor/skills/
 ### 方法二：Git Clone
 
 ```bash
-git clone https://github.com/your-username/anti-seo-researcher.git
+git clone https://github.com/AmosHc/ai-skill-anti-seo-researcher.git
 # 然后将目录拷贝到你的 AI 编码助手的 Skill 目录下
 ```
 
